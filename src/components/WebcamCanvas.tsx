@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { HUD } from './HUD'
 import { PoseStabilizer } from '../detection/poseStabilizer'
+import { initModels, runInference } from '../mediapipe/mainThreadInference'
 import {
   createCloneState,
   triggerClone,
@@ -13,7 +14,7 @@ import {
   drawFlash,
 } from '../rendering/flashEffect'
 import { playPoofSound, initAudio } from '../rendering/soundEffect'
-import type { DetectionResult, CloneState, FlashState } from '../types'
+import type { CloneState, FlashState } from '../types'
 
 interface Props {
   onError: (msg: string) => void
@@ -23,15 +24,15 @@ interface Props {
 export function WebcamCanvas({ onError, onLoading }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
-  const workerRef = useRef<Worker | null>(null)
   const rafRef = useRef<number>(0)
   const frameCountRef = useRef(0)
   const readyRef = useRef(false)
+  const modelsReadyRef = useRef(false)
 
   const fpsFrames = useRef<number[]>([])
   const [fps, setFps] = useState(0)
+  const fpsValueRef = useRef(0)
 
-  const latestResult = useRef<DetectionResult | null>(null)
   const stabilizerRef = useRef(new PoseStabilizer({ requiredFrames: 10, cooldownMs: 4000 }))
   const cloneStateRef = useRef<CloneState>(createCloneState())
   const flashStateRef = useRef<FlashState>(createFlashState())
@@ -56,7 +57,6 @@ export function WebcamCanvas({ onError, onLoading }: Props) {
       return
     }
 
-    // Signal ready on first valid frame
     if (!readyRef.current) {
       readyRef.current = true
       onLoading(null)
@@ -74,32 +74,26 @@ export function WebcamCanvas({ onError, onLoading }: Props) {
     const h = canvas.height
     const now = performance.now()
 
-    // FPS
+    // FPS tracking
     fpsFrames.current.push(now)
     if (fpsFrames.current.length > 30) fpsFrames.current.shift()
     if (fpsFrames.current.length >= 2) {
       const span = fpsFrames.current[fpsFrames.current.length - 1] - fpsFrames.current[0]
-      setFps(Math.round(((fpsFrames.current.length - 1) / span) * 1000))
+      const currentFps = Math.round(((fpsFrames.current.length - 1) / span) * 1000)
+      fpsValueRef.current = currentFps
+      setFps(currentFps)
     }
 
-    // Send frame to worker
-    const worker = workerRef.current
-    if (worker) {
-      frameCountRef.current++
-      createImageBitmap(video).then(bmp => {
-        worker.postMessage(
-          { type: 'frame', bitmap: bmp, timestamp: now, frameCount: frameCountRef.current },
-          [bmp]
-        )
-      }).catch(() => {/* skip */})
-    }
-
-    const result = latestResult.current
+    // Run inference on main thread (staggered)
     const stabilizer = stabilizerRef.current
     const cloneState = cloneStateRef.current
     const flashState = flashStateRef.current
 
-    if (result) {
+    if (modelsReadyRef.current) {
+      frameCountRef.current++
+      const lowFps = fpsValueRef.current > 0 && fpsValueRef.current < 15
+      const result = runInference(video, now, frameCountRef.current, lowFps)
+
       const triggered = stabilizer.update(result.sealDetected)
 
       if (triggered && !cloneState.active) {
@@ -140,6 +134,8 @@ export function WebcamCanvas({ onError, onLoading }: Props) {
   }, [onLoading])
 
   useEffect(() => {
+    let cancelled = false
+
     async function setup() {
       try {
         onLoading('Requesting webcam...')
@@ -147,6 +143,7 @@ export function WebcamCanvas({ onError, onLoading }: Props) {
           video: { width: 640, height: 480, facingMode: 'user' },
           audio: false,
         })
+        if (cancelled) return
         if (videoRef.current) {
           videoRef.current.srcObject = stream
           await videoRef.current.play()
@@ -156,26 +153,16 @@ export function WebcamCanvas({ onError, onLoading }: Props) {
         return
       }
 
-      onLoading('Loading MediaPipe models (first load ~10s)...')
-
-      const worker = new Worker(
-        new URL('../mediapipe/inferenceWorker.ts', import.meta.url),
-        { type: 'module' }
-      )
-
-      worker.onmessage = (e) => {
-        if (e.data.type === 'ready') {
-          console.log('[Worker] MediaPipe ready')
-          onLoading('Starting camera...')
-        } else if (e.data.type === 'result') {
-          latestResult.current = e.data.result
-        } else if (e.data.type === 'error') {
-          console.error('[Worker] Error:', e.data.message)
-          onError('Failed to load AI models. Check your connection and reload.')
-        }
+      try {
+        await initModels((msg) => onLoading(msg))
+        if (cancelled) return
+        modelsReadyRef.current = true
+        onLoading('Starting camera...')
+      } catch (err) {
+        console.error('Model load error:', err)
+        onError('Failed to load AI models. Check your connection and reload.')
+        return
       }
-
-      workerRef.current = worker
 
       rafRef.current = requestAnimationFrame(renderLoop)
     }
@@ -183,8 +170,8 @@ export function WebcamCanvas({ onError, onLoading }: Props) {
     setup()
 
     return () => {
+      cancelled = true
       cancelAnimationFrame(rafRef.current)
-      workerRef.current?.terminate()
       const video = videoRef.current
       if (video) {
         const stream = video.srcObject as MediaStream | null

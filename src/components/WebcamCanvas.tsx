@@ -130,7 +130,10 @@ export function WebcamCanvas({ onError, onLoading }: Props) {
       })
     }
 
-    updateClone(cloneState)
+    const justPoofed = updateClone(cloneState, w, h)
+    if (justPoofed) {
+      playPoofSound()
+    }
 
     // Draw
     ctx.clearRect(0, 0, w, h)

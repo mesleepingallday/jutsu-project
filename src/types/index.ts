@@ -27,11 +27,23 @@ export interface DetectionResult {
   timestamp: number
 }
 
+export interface SmokeParticle {
+  x: number
+  y: number
+  vx: number
+  vy: number
+  radius: number
+  alpha: number
+  life: number
+  maxLife: number
+}
+
 export interface CloneState {
   active: boolean
-  phase: 'flash' | 'fadein' | 'hold' | 'fadeout' | 'done'
+  phase: 'flash' | 'fadein' | 'hold' | 'fadeout' | 'poof' | 'done'
   startTime: number
   alpha: number
+  particles: SmokeParticle[]
 }
 
 export interface FlashState {

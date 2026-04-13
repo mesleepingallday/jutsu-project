@@ -8,7 +8,7 @@ export class PoseStabilizer {
   private lastTriggerTime = 0
   private config: StabilizerConfig
 
-  constructor(config: StabilizerConfig = { requiredFrames: 10, cooldownMs: 4000 }) {
+  constructor(config: StabilizerConfig = { requiredFrames: 10, cooldownMs: 10500 }) {
     this.config = config
   }
 

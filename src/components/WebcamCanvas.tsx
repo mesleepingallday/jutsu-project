@@ -39,9 +39,10 @@ export function WebcamCanvas({ onError, onLoading }: Props) {
   const [fps, setFps] = useState(0)
   const fpsValueRef = useRef(0)
 
-  const stabilizerRef = useRef(new PoseStabilizer({ requiredFrames: 10, cooldownMs: 4000 }))
+  const stabilizerRef = useRef(new PoseStabilizer({ requiredFrames: 10, cooldownMs: 10500 }))
   const cloneStateRef = useRef<CloneState>(createCloneState())
   const flashStateRef = useRef<FlashState>(createFlashState())
+  const maskDataRef = useRef<{ mask: Float32Array; width: number; height: number } | null>(null)
 
   const [hudState, setHudState] = useState<{
     sealProgress: number
@@ -106,19 +107,18 @@ export function WebcamCanvas({ onError, onLoading }: Props) {
       const lowFps = fpsValueRef.current > 0 && fpsValueRef.current < 15
       const result = runInference(video, now, frameCountRef.current, lowFps)
 
+      // Update latest mask data every inference frame
+      if (result.mask && result.maskWidth && result.maskHeight) {
+        maskDataRef.current = { mask: result.mask, width: result.maskWidth, height: result.maskHeight }
+      }
+
       const triggered = stabilizer.update(result.sealDetected)
 
       if (triggered && !cloneState.active) {
         initAudio()
         playPoofSound()
         triggerFlash(flashState)
-
-        const maskData =
-          result.mask && result.maskWidth && result.maskHeight
-            ? { mask: result.mask, width: result.maskWidth, height: result.maskHeight }
-            : undefined
-
-        triggerClone(cloneState, video, maskData)
+        triggerClone(cloneState)
       }
 
       setHudState({
@@ -140,7 +140,7 @@ export function WebcamCanvas({ onError, onLoading }: Props) {
     ctx.drawImage(video, -w, 0, w, h)
     ctx.restore()
 
-    drawClones(ctx, cloneState, w, h)
+    drawClones(ctx, cloneState, w, h, video, maskDataRef.current)
     drawFlash(ctx, flashState, w, h)
 
     rafRef.current = requestAnimationFrame(renderLoop)

@@ -31,7 +31,6 @@ export interface CloneState {
   active: boolean
   phase: 'flash' | 'fadein' | 'hold' | 'fadeout' | 'done'
   startTime: number
-  cloneCanvas: OffscreenCanvas | null
   alpha: number
 }
 

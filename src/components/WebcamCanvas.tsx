@@ -29,6 +29,12 @@ export function WebcamCanvas({ onError, onLoading }: Props) {
   const readyRef = useRef(false)
   const modelsReadyRef = useRef(false)
 
+  // Stable refs for callbacks — avoids useEffect re-triggering
+  const onErrorRef = useRef(onError)
+  const onLoadingRef = useRef(onLoading)
+  onErrorRef.current = onError
+  onLoadingRef.current = onLoading
+
   const fpsFrames = useRef<number[]>([])
   const [fps, setFps] = useState(0)
   const fpsValueRef = useRef(0)
@@ -59,7 +65,7 @@ export function WebcamCanvas({ onError, onLoading }: Props) {
 
     if (!readyRef.current) {
       readyRef.current = true
-      onLoading(null)
+      onLoadingRef.current(null)
     }
 
     const ctx = canvas.getContext('2d')
@@ -131,14 +137,14 @@ export function WebcamCanvas({ onError, onLoading }: Props) {
     drawFlash(ctx, flashState, w, h)
 
     rafRef.current = requestAnimationFrame(renderLoop)
-  }, [onLoading])
+  }, [])
 
   useEffect(() => {
     let cancelled = false
 
     async function setup() {
       try {
-        onLoading('Requesting webcam...')
+        onLoadingRef.current('Requesting webcam...')
         const stream = await navigator.mediaDevices.getUserMedia({
           video: { width: 640, height: 480, facingMode: 'user' },
           audio: false,
@@ -149,18 +155,18 @@ export function WebcamCanvas({ onError, onLoading }: Props) {
           await videoRef.current.play()
         }
       } catch {
-        onError('Webcam access denied. Please allow camera access and reload the page.')
+        onErrorRef.current('Webcam access denied. Please allow camera access and reload the page.')
         return
       }
 
       try {
-        await initModels((msg) => onLoading(msg))
+        await initModels((msg) => onLoadingRef.current(msg))
         if (cancelled) return
         modelsReadyRef.current = true
-        onLoading('Starting camera...')
+        onLoadingRef.current('Starting camera...')
       } catch (err) {
         console.error('Model load error:', err)
-        onError('Failed to load AI models. Check your connection and reload.')
+        onErrorRef.current('Failed to load AI models. Check your connection and reload.')
         return
       }
 
@@ -172,18 +178,13 @@ export function WebcamCanvas({ onError, onLoading }: Props) {
     return () => {
       cancelled = true
       cancelAnimationFrame(rafRef.current)
-      // Only stop tracks if component is truly unmounting (not StrictMode remount)
-      setTimeout(() => {
-        if (cancelled) {
-          const video = videoRef.current
-          if (video) {
-            const stream = video.srcObject as MediaStream | null
-            stream?.getTracks().forEach(t => t.stop())
-          }
-        }
-      }, 100)
+      const video = videoRef.current
+      if (video) {
+        const stream = video.srcObject as MediaStream | null
+        stream?.getTracks().forEach(t => t.stop())
+      }
     }
-  }, [onError, onLoading, renderLoop])
+  }, [renderLoop])
 
   return (
     <div className="canvas-wrapper">

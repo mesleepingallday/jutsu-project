@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import { WebcamCanvas } from './components/WebcamCanvas'
 import { LoadingScreen } from './components/LoadingScreen'
 
@@ -6,13 +6,13 @@ export default function App() {
   const [loadingMessage, setLoadingMessage] = useState<string | null>('Requesting webcam...')
   const [error, setError] = useState<string | null>(null)
 
-  function handleLoading(msg: string | null) {
+  const handleLoading = useCallback((msg: string | null) => {
     setLoadingMessage(msg)
-  }
+  }, [])
 
-  function handleError(msg: string) {
+  const handleError = useCallback((msg: string) => {
     setError(msg)
-  }
+  }, [])
 
   if (error) {
     return (

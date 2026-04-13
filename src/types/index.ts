@@ -40,7 +40,7 @@ export interface SmokeParticle {
 
 export interface CloneState {
   active: boolean
-  phase: 'flash' | 'fadein' | 'hold' | 'fadeout' | 'poof' | 'done'
+  phase: 'flash' | 'fadein' | 'hold' | 'poof' | 'done'
   startTime: number
   alpha: number
   particles: SmokeParticle[]

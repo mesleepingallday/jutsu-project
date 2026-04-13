@@ -4,8 +4,7 @@ const PHASE_DURATIONS = {
   flash: 150,
   fadein: 350,   // 150-500ms
   hold: 9000,    // 500-9500ms
-  fadeout: 500,  // 9500-10000ms
-  poof: 700,     // 10000-10700ms
+  poof: 700,     // 9500-10200ms
 }
 
 // Reusable offscreen canvas for mask compositing (avoids per-frame allocation)
@@ -21,17 +20,17 @@ function getCompositeCanvas(w: number, h: number): OffscreenCanvasRenderingConte
 }
 
 function spawnParticles(cx: number, cy: number): SmokeParticle[] {
-  const count = 24
+  const count = 36
   const particles: SmokeParticle[] = []
   for (let i = 0; i < count; i++) {
     const angle = (Math.PI * 2 * i) / count + (Math.random() - 0.5) * 0.4
-    const speed = 40 + Math.random() * 80
+    const speed = 60 + Math.random() * 120
     particles.push({
-      x: cx + (Math.random() - 0.5) * 30,
-      y: cy + (Math.random() - 0.5) * 30,
+      x: cx + (Math.random() - 0.5) * 50,
+      y: cy + (Math.random() - 0.5) * 50,
       vx: Math.cos(angle) * speed,
       vy: Math.sin(angle) * speed - 20 - Math.random() * 30, // upward drift
-      radius: 5 + Math.random() * 10,
+      radius: 8 + Math.random() * 18,
       alpha: 0.7 + Math.random() * 0.2,
       life: 0,
       maxLife: 500 + Math.random() * 200,
@@ -76,11 +75,7 @@ export function updateClone(state: CloneState, canvasW: number, canvasH: number)
     } else if (elapsed < PHASE_DURATIONS.flash + PHASE_DURATIONS.fadein + PHASE_DURATIONS.hold) {
       state.phase = 'hold'
       state.alpha = 1.0
-    } else if (elapsed < PHASE_DURATIONS.flash + PHASE_DURATIONS.fadein + PHASE_DURATIONS.hold + PHASE_DURATIONS.fadeout) {
-      state.phase = 'fadeout'
-      const t = (elapsed - PHASE_DURATIONS.flash - PHASE_DURATIONS.fadein - PHASE_DURATIONS.hold) / PHASE_DURATIONS.fadeout
-      state.alpha = 1.0 * (1 - t)
-    } else if (elapsed < PHASE_DURATIONS.flash + PHASE_DURATIONS.fadein + PHASE_DURATIONS.hold + PHASE_DURATIONS.fadeout + PHASE_DURATIONS.poof) {
+    } else if (elapsed < PHASE_DURATIONS.flash + PHASE_DURATIONS.fadein + PHASE_DURATIONS.hold + PHASE_DURATIONS.poof) {
       if (state.phase !== 'poof') {
         // Just entered poof — spawn particles at each clone position
         state.phase = 'poof'
@@ -108,7 +103,7 @@ export function updateClone(state: CloneState, canvasW: number, canvasH: number)
     p.x += p.vx * dt
     p.y += p.vy * dt
     p.vy += 15 * dt // slight gravity drag
-    p.radius = p.radius + (30 * dt) // grow over time
+    p.radius = p.radius + (50 * dt) // grow over time
     p.alpha = (1 - t) * 0.75
     return true
   })

@@ -61,8 +61,8 @@ export function updateClone(state: CloneState): void {
 }
 
 const CLONE_POSITIONS = [
-  { dx: -100, dy: 5, scale: 0.95 },
-  { dx: 100, dy: -5, scale: 0.90 },
+  { dx: -220, dy: 5, scale: 0.95 },
+  { dx: 220, dy: -5, scale: 0.90 },
 ]
 
 export function drawClones(

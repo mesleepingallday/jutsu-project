@@ -1,12 +1,25 @@
+import type { SealCheckResult } from '../types'
+
 interface Props {
   fps: number
   sealProgress: number
   isInCooldown: boolean
   handsDetected: number
   cloneActive: boolean
+  sealChecks?: SealCheckResult
 }
 
-export function HUD({ fps, sealProgress, isInCooldown, handsDetected, cloneActive }: Props) {
+const CHECK_LABELS: { key: keyof SealCheckResult['checks']; label: string }[] = [
+  { key: 'twoHands',      label: '2 hands' },
+  { key: 'wristsCentered', label: 'centered' },
+  { key: 'wristsClose',   label: 'wrists close' },
+  { key: 'boxesOverlap',  label: 'overlap' },
+  { key: 'chestHeight',   label: 'chest height' },
+  { key: 'fingersUp',     label: 'fingers up' },
+  { key: 'handsCrossed',  label: 'crossed' },
+]
+
+export function HUD({ fps, sealProgress, isInCooldown, handsDetected, cloneActive, sealChecks }: Props) {
   const fpsWarning = fps > 0 && fps < 15
 
   return (
@@ -18,7 +31,7 @@ export function HUD({ fps, sealProgress, isInCooldown, handsDetected, cloneActiv
 
         {handsDetected > 0 && (
           <div className="hud-pill">
-            {handsDetected === 2 ? '👐 2 hands' : '✋ 1 hand'}
+            {handsDetected === 2 ? '2 hands' : '1 hand'}
           </div>
         )}
 
@@ -36,18 +49,31 @@ export function HUD({ fps, sealProgress, isInCooldown, handsDetected, cloneActiv
 
         {cloneActive && (
           <div className="hud-pill active">
-            ⚡ Shadow Clone!
+            Shadow Clone!
           </div>
         )}
 
         {fpsWarning && (
           <div className="hud-pill warning">
-            ⚠ Low FPS — segmentation paused
+            Low FPS — segmentation paused
           </div>
         )}
       </div>
 
-      <div>
+      <div className="hud-right">
+        {handsDetected === 2 && sealChecks && (
+          <div className="hud-checks">
+            {CHECK_LABELS.map(({ key, label }) => (
+              <div
+                key={key}
+                className={`hud-check ${sealChecks.checks[key] ? 'pass' : 'fail'}`}
+              >
+                {sealChecks.checks[key] ? '✓' : '✗'} {label}
+              </div>
+            ))}
+          </div>
+        )}
+
         <div className="hud-pill">
           Make a cross seal ✕
         </div>

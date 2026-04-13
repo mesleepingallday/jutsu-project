@@ -143,6 +143,38 @@ canvas {
   color: #ef4444;
 }
 
+.hud-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.hud-checks {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 6px 10px;
+  backdrop-filter: blur(4px);
+}
+
+.hud-check {
+  font-size: 0.7rem;
+  font-family: monospace;
+  line-height: 1.4;
+}
+
+.hud-check.pass {
+  color: #4ade80;
+}
+
+.hud-check.fail {
+  color: #f87171;
+}
+
 .hud-title {
   position: absolute;
   bottom: 24px;

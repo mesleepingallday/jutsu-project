@@ -4,8 +4,22 @@ export interface HandLandmark {
   z: number
 }
 
+export interface SealCheckResult {
+  passed: boolean
+  checks: {
+    twoHands: boolean
+    wristsCentered: boolean
+    wristsClose: boolean
+    boxesOverlap: boolean
+    chestHeight: boolean
+    fingersUp: boolean
+    handsCrossed: boolean
+  }
+}
+
 export interface DetectionResult {
   sealDetected: boolean
+  sealChecks?: SealCheckResult
   landmarks: HandLandmark[][]
   mask?: Float32Array
   maskWidth?: number

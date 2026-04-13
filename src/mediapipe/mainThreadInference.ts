@@ -87,10 +87,11 @@ export function runInference(
     segResult.close?.()
   }
 
-  const sealDetected = detectCrossSeal(landmarks)
+  const sealResult = detectCrossSeal(landmarks)
 
   return {
-    sealDetected,
+    sealDetected: sealResult.passed,
+    sealChecks: sealResult,
     landmarks,
     mask: latestMask ?? undefined,
     maskWidth,

@@ -14,7 +14,7 @@ import {
   drawFlash,
 } from '../rendering/flashEffect'
 import { playPoofSound, initAudio } from '../rendering/soundEffect'
-import type { CloneState, FlashState } from '../types'
+import type { CloneState, FlashState, SealCheckResult } from '../types'
 
 interface Props {
   onError: (msg: string) => void
@@ -43,7 +43,13 @@ export function WebcamCanvas({ onError, onLoading }: Props) {
   const cloneStateRef = useRef<CloneState>(createCloneState())
   const flashStateRef = useRef<FlashState>(createFlashState())
 
-  const [hudState, setHudState] = useState({
+  const [hudState, setHudState] = useState<{
+    sealProgress: number
+    isInCooldown: boolean
+    handsDetected: number
+    cloneActive: boolean
+    sealChecks?: SealCheckResult
+  }>({
     sealProgress: 0,
     isInCooldown: false,
     handsDetected: 0,
@@ -120,6 +126,7 @@ export function WebcamCanvas({ onError, onLoading }: Props) {
         isInCooldown: stabilizer.isInCooldown(),
         handsDetected: result.landmarks.length,
         cloneActive: cloneState.active,
+        sealChecks: result.sealChecks,
       })
     }
 
@@ -196,6 +203,7 @@ export function WebcamCanvas({ onError, onLoading }: Props) {
         isInCooldown={hudState.isInCooldown}
         handsDetected={hudState.handsDetected}
         cloneActive={hudState.cloneActive}
+        sealChecks={hudState.sealChecks}
       />
       <div className="hud-title">影分身の術 — Shadow Clone Jutsu</div>
     </div>

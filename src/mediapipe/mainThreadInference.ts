@@ -13,8 +13,18 @@ let imageSegmenter: ImageSegmenter | null = null
 let latestMask: Float32Array | null = null
 let maskWidth = 0
 let maskHeight = 0
+let initPromise: Promise<void> | null = null
+let lastTimestamp = 0
 
 export async function initModels(onProgress: (msg: string) => void): Promise<void> {
+  // Guard against double-init (React StrictMode double-mounts)
+  if (handLandmarker && imageSegmenter) return
+  if (initPromise) return initPromise
+  initPromise = doInit(onProgress)
+  return initPromise
+}
+
+async function doInit(onProgress: (msg: string) => void): Promise<void> {
   onProgress('Loading MediaPipe WASM...')
   const vision = await FilesetResolver.forVisionTasks(CDN)
 
@@ -55,13 +65,17 @@ export function runInference(
     return { sealDetected: false, landmarks: [], timestamp }
   }
 
-  const handResult = handLandmarker.detectForVideo(video, timestamp)
+  // MediaPipe requires strictly increasing timestamps
+  const mpTimestamp = Math.max(Math.round(timestamp), lastTimestamp + 1)
+  lastTimestamp = mpTimestamp
+
+  const handResult = handLandmarker.detectForVideo(video, mpTimestamp)
   const landmarks = handResult.landmarks ?? []
 
   // Segmentation every 5th frame (every 6th if low FPS)
   const segInterval = lowFps ? 6 : 5
   if (frameCount % segInterval === 0) {
-    const segResult = imageSegmenter.segmentForVideo(video, timestamp)
+    const segResult = imageSegmenter.segmentForVideo(video, mpTimestamp)
     const masks = segResult.confidenceMasks
     if (masks && masks.length > 0) {
       const mp = masks[0]

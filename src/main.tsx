@@ -1,10 +1,7 @@
-import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
 
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <App />
-  </StrictMode>,
-)
+// No StrictMode — MediaPipe allocates GPU/WASM resources that
+// cannot survive double-mount teardown in dev mode.
+createRoot(document.getElementById('root')!).render(<App />)

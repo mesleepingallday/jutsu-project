@@ -172,11 +172,16 @@ export function WebcamCanvas({ onError, onLoading }: Props) {
     return () => {
       cancelled = true
       cancelAnimationFrame(rafRef.current)
-      const video = videoRef.current
-      if (video) {
-        const stream = video.srcObject as MediaStream | null
-        stream?.getTracks().forEach(t => t.stop())
-      }
+      // Only stop tracks if component is truly unmounting (not StrictMode remount)
+      setTimeout(() => {
+        if (cancelled) {
+          const video = videoRef.current
+          if (video) {
+            const stream = video.srcObject as MediaStream | null
+            stream?.getTracks().forEach(t => t.stop())
+          }
+        }
+      }, 100)
     }
   }, [onError, onLoading, renderLoop])
 
